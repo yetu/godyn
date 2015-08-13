@@ -51,7 +51,6 @@ func main() {
 	customer := os.Getenv("DYNECT_CUSTOMER")
 	username := os.Getenv("DYNECT_USERNAME")
 	password := os.Getenv("DYNECT_PASSWORD")
-	log.Printf("Using username %s, Customer %s, Password %s ", username, customer, password)
 	zone := os.Getenv("DYNECT_ZONE")
 	fqdn := os.Getenv("DYNECT_FQDN")
 

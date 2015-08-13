@@ -66,14 +66,14 @@ func main() {
 	password := os.Getenv("DYNECT_PASSWORD")
 	zone := os.Getenv("DYNECT_ZONE")
 	fqdn := os.Getenv("DYNECT_FQDN")
-	log.Printf("Trying to update A record for %s to current container IP", fqdn)
-	client, err := dynect.New(customer, username, password)
-	if err != nil {
-		log.Panicf("Can't create dynect client: %v", err)
-	}
 	publicIp, err := getPublicIpFromHosts()
 	if err != nil {
 		log.Panicf("Can't determine public IP for this container: %v", err)
+	}
+	log.Printf("Trying to update A record for %s to current container IP %s", fqdn, publicIp)
+	client, err := dynect.New(customer, username, password)
+	if err != nil {
+		log.Panicf("Can't create dynect client: %v", err)
 	}
 	/*zoneReq := &CreateRecordRequest{
 		Rdata: Rdata{

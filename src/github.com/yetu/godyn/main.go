@@ -41,8 +41,8 @@ func getPublicIpFromHosts() (ip string, err error) {
 
 func main() {
 	flag.Parse()
-	zone := os.Getenv("DYNECT_ZONE")
-	fqdn := os.Getenv("DYNECT_FQDN")
+	zone := os.Getenv("GODYN_ZONE")
+	fqdn := os.Getenv("GODYN_FQDN")
 	publicIp, err := getPublicIpFromHosts()
 	if err != nil {
 		log.Panicf("Can't determine public IP for this container: %v", err)

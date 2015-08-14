@@ -34,3 +34,7 @@ DYNECT_USERNAME | Your Dynect user name
 DYNECT_PASSWORD | Your Dynect password
 
 All environment variables are required.
+
+# Development
+
+This tool is build [gb](http://getgb.io/) and follows the necessary folder structure.

@@ -2,37 +2,17 @@ package main
 
 import (
 	"bufio"
-	"bytes"
-	"encoding/json"
 	"errors"
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"regexp"
 
-	"github.com/docker-infra/go-dynect/dynect"
+	"github.com/yetu/godyn/dns"
+	"github.com/yetu/godyn/dynectProvider"
 )
 
-type Rdata struct {
-	Address string `json:"address"`
-}
-type ARecord struct {
-	RecordData Rdata `json:"rdata"`
-	Ttl        int   `json:"ttl"`
-}
-type CreateRecordRequest struct {
-	Rdata Rdata `json:"rdata"`
-	Ttl   int   `json:"ttl"`
-}
-
-type UpdateRecordRequest struct {
-	ARecords []ARecord `json:"ARecords"`
-}
-
-type Publish struct {
-	Publish string `json:"publish"`
-}
+var dnsProvider dns.Provider
 
 /*
 This tries to parse the file /etc/hosts inside the container and extract the first
@@ -61,9 +41,6 @@ func getPublicIpFromHosts() (ip string, err error) {
 
 func main() {
 	flag.Parse()
-	customer := os.Getenv("DYNECT_CUSTOMER")
-	username := os.Getenv("DYNECT_USERNAME")
-	password := os.Getenv("DYNECT_PASSWORD")
 	zone := os.Getenv("DYNECT_ZONE")
 	fqdn := os.Getenv("DYNECT_FQDN")
 	publicIp, err := getPublicIpFromHosts()
@@ -71,62 +48,14 @@ func main() {
 		log.Panicf("Can't determine public IP for this container: %v", err)
 	}
 	log.Printf("Trying to update A record for %s to current container IP %s", fqdn, publicIp)
-	client, err := dynect.New(customer, username, password)
+	dnsProvider, err = dynectProvider.NewProvider()
 	if err != nil {
-		log.Panicf("Can't create dynect client: %v", err)
+		log.Panicf("Can't create DNS provider: %v", err)
 	}
-	/*zoneReq := &CreateRecordRequest{
-		Rdata: Rdata{
-			Address: publicIp,
-		},
-		Ttl: 0,
-	}*/
-
-	updateReq := &UpdateRecordRequest{
-		[]ARecord{
-			{Rdata{publicIp}, 0},
-		},
-	}
-	zreqBytes, err := json.Marshal(updateReq)
-	//log.Printf("Request Payload: %s", string(zreqBytes))
+	_, err = dnsProvider.UpdateARecord(zone, fqdn, publicIp, false)
 	if err != nil {
-		log.Panicf("Can't marshal zone request: %v", err)
-	}
-
-	path := fmt.Sprintf("ARecord/%s/%s/", zone, fqdn)
-	responseBytes, err := client.Request("PUT", path, bytes.NewReader(zreqBytes))
-	if err != nil {
-		log.Panicf("Failed to update FQDN %s for this host: %v", fqdn, err)
+		log.Fatalf("Failed to update A record: %v", err)
 	} else {
-		responseString := string(responseBytes)
-		response := &dynect.Response{}
-		if err := json.Unmarshal(responseBytes, response); err != nil {
-			log.Panicf("Can't unmarshall response from dynect: %s Error %v", responseString, err)
-		}
-		if response.Status == "success" {
-			log.Printf("Successfully updated FQDN %s to IP %s", fqdn, publicIp)
-			publishRequest := &Publish{Publish: "True"}
-			publishRequestBytes, err := json.Marshal(publishRequest)
-			if err != nil {
-				log.Panicf("Can't marshal publish zone request: %v", err)
-			}
-			publishPath := fmt.Sprintf("Zone/%s", zone)
-			prResultBytes, err := client.Request("PUT", publishPath, bytes.NewReader(publishRequestBytes))
-			if err != nil {
-				log.Panicf("Can't publish changes: %v", err)
-			} else {
-				prResult := &dynect.Response{}
-				if err := json.Unmarshal(prResultBytes, prResult); err != nil {
-					log.Panicf("Can't unmarshall response from dynect. Error %v Response %s", err, string(prResultBytes))
-				}
-				if prResult.Status == "success" {
-					log.Printf("Successfully published changes to Dynect")
-				} else {
-					log.Panicf("Failed to publish changes to Dynect: %s", string(prResultBytes))
-				}
-			}
-		} else {
-			log.Panicf("Failed to modify zone in Dynect. Response: %s", responseString)
-		}
+		log.Printf("Successfully updated FQDN %s with A record for %s", fqdn, publicIp)
 	}
 }

@@ -22,10 +22,15 @@ Necessary variables are:
 
 Name | Description
 ---- | -----------
+GODYN_ZONE | The Dynect managed zone you wish to modify
+GODYN_FQDN | The fqdn you want to set the A record for
+
+And for the Dynect provider set:
+
+Name | Description
+---- | -----------
 DYNECT_CUSTOMER | Your Dynect customer name
 DYNECT_USERNAME | Your Dynect user name
 DYNECT_PASSWORD | Your Dynect password
-DYNECT_ZONE | The Dynect managed zone you wish to modify
-DYNECT_FQDN | The fqdn you want to set the A record for
 
 All environment variables are required.

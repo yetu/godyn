@@ -4,10 +4,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"os"
 
 	"github.com/docker-infra/go-dynect/dynect"
+)
+
+var (
+	forceF = flag.Bool("force", false, "Try to delete CNAME record in case of error")
 )
 
 type DynectProvider struct {
@@ -76,6 +81,26 @@ func (provider *DynectProvider) setARecords(zone, fqdn, ip string) (result bool,
 	}
 }
 
+func (provider *DynectProvider) DeleteCName(zone, fqdn string) (result bool, err error) {
+	result = false
+	path := fmt.Sprintf("CNAMERecord/%s/%s/", zone, fqdn)
+	responseBody, err := provider.client.Request("DELETE", path, nil)
+	if err != nil {
+		return
+	}
+	response := &dynect.Response{}
+	if err = json.Unmarshal(responseBody, response); err != nil {
+		return
+	}
+	if response.Status == "success" {
+		result = true
+		return
+	} else {
+		err = fmt.Errorf("Can't Delete CNAME entry for %s. Response: %s", fqdn, string(responseBody))
+		return
+	}
+}
+
 func (provider *DynectProvider) publishChanges(zone string) (result bool, err error) {
 	result = false
 	publishRequest := &Publish{Publish: "True"}
@@ -105,7 +130,14 @@ func (provider *DynectProvider) UpdateARecord(zone, fqdn, ip string, force bool)
 	result = false
 	result, err = provider.setARecords(zone, fqdn, ip)
 	if err != nil {
-		return
+		if *forceF {
+			result, err = provider.DeleteCName(zone, fqdn)
+			if err != nil {
+				return
+			}
+		} else {
+			return
+		}
 	}
 	result, err = provider.publishChanges(zone)
 	return

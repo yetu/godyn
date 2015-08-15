@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"regexp"
@@ -43,6 +44,13 @@ func main() {
 	flag.Parse()
 	zone := os.Getenv("GODYN_ZONE")
 	fqdn := os.Getenv("GODYN_FQDN")
+	if fqdn == "" {
+		hostname, err := os.Hostname()
+		if err != nil {
+			log.Panicf("Can't determine hostname and GODYN_FQDN not specified: %v", err)
+		}
+		fqdn = fmt.Sprintf("%s.%s", hostname, zone)
+	}
 	publicIp, err := getPublicIpFromHosts()
 	if err != nil {
 		log.Panicf("Can't determine public IP for this container: %v", err)
